@@ -1,131 +1,113 @@
 (function () {
-    const PRIMARY = '#b75536';
-    const BG = '#fffaf5';
-    const FONT = '#333333';
-    const LAUNCHER_SIZE = 90; // px
-    const LOGO_MAX_H = 40;    // px
-    const AUTO_OPEN = true;   // open chat on load
+  const PRIMARY = '#b75536';
+  const BG = '#fffaf5';
+  const FONT = '#333333';
+  const LAUNCHER_SIZE = 90; // px
+  const LOGO_MAX_H = 40;    // px
+  const AUTO_OPEN = true;
+  const WEBHOOK_URL = 'https://n8n.lmallen.uk/webhook/f406671e-c954-4691-b39a-66c90aa2f103/chat';
 
-    const WEBHOOK_URL = 'https://n8n.lmallen.uk/webhook/f406671e-c954-4691-b39a-66c90aa2f103/chat';
+  const css = `
+  .n8n-chat-widget { --primary:${PRIMARY}; --bg:${BG}; --font:${FONT}; position:fixed; right:20px; bottom:20px; z-index:2147483647; }
+  .n8n-chat-widget * { box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Inter,system-ui,sans-serif; }
+  .n8n-chat-widget .chat-toggle{
+    position:fixed; right:20px; bottom:20px; width:${LAUNCHER_SIZE}px; height:${LAUNCHER_SIZE}px;
+    border-radius:50%; background:${PRIMARY}; color:#fff; border:0; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 8px 24px rgba(0,0,0,.18); cursor:pointer;
+  }
+  .n8n-chat-widget .chat-toggle svg{ width:${Math.round(LAUNCHER_SIZE*0.37)}px; height:${Math.round(LAUNCHER_SIZE*0.37)}px; }
+  .n8n-chat-widget .chat-container{
+    position:fixed; right:20px; bottom:${LAUNCHER_SIZE+16}px; width:min(92vw,380px); height:520px;
+    display:none; flex-direction:column; background:${BG}; color:${FONT}; border-radius:12px;
+    box-shadow:0 16px 48px rgba(0,0,0,.2); overflow:hidden; border:1px solid rgba(0,0,0,.06);
+  }
+  .n8n-chat-widget.open .chat-container{ display:flex; }
+  .n8n-chat-widget .chat-header{ display:flex; align-items:center; gap:10px; padding:10px 12px; background:${BG}; border-bottom:1px solid rgba(0,0,0,.08); }
+  .n8n-chat-widget .chat-header img{ max-height:${LOGO_MAX_H}px; width:auto; height:auto; object-fit:contain; }
+  .n8n-chat-widget .chat-messages{ flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:10px; }
+  .n8n-chat-widget .msg{ max-width:85%; padding:10px 12px; border-radius:12px; line-height:1.35; font-size:14px; }
+  .n8n-chat-widget .msg.user{ margin-left:auto; background:#fff; border:1px solid rgba(0,0,0,.08); }
+  .n8n-chat-widget .msg.bot{ background:#fdeee7; border:1px solid #f6d0c3; }
+  .n8n-chat-widget .chat-input{ display:flex; gap:8px; padding:10px; border-top:1px solid rgba(0,0,0,.08); background:${BG}; }
+  .n8n-chat-widget .chat-input input{ flex:1; padding:10px 12px; border-radius:10px; border:1px solid rgba(0,0,0,.15); outline:none; background:#fff; color:${FONT}; }
+  .n8n-chat-widget .chat-input button{ background:${PRIMARY}; color:#fff; border:0; border-radius:10px; padding:10px 14px; cursor:pointer; }
+  .n8n-chat-widget .chat-footer{ display:none !important; }
+  `;
 
-    const css = `
-    .n8n-chat-widget * { box-sizing: border-box; font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Inter,system-ui,sans-serif; }
-    .n8n-chat-widget { --primary:${PRIMARY}; --bg:${BG}; --font:${FONT}; }
-    .n8n-chat-widget .chat-container { background: var(--bg) !important; color: var(--font); }
-    .n8n-chat-widget .chat-header { background: var(--bg) !important; }
-    .n8n-chat-widget .chat-header img {
-      max-height: ${LOGO_MAX_H}px !important;
-      width: auto !important;
-      height: auto !important;
-      object-fit: contain !important;
-    }
-    .n8n-chat-widget .chat-footer { display: none !important; }
-    .n8n-chat-widget .chat-toggle {
-      width: ${LAUNCHER_SIZE}px !important;
-      height: ${LAUNCHER_SIZE}px !important;
-      border-radius: 50% !important;
-      background: var(--primary) !important;
-      color: #fff !important;
-    }
-    .n8n-chat-widget .chat-toggle svg {
-      width: ${Math.round(LAUNCHER_SIZE * 0.37)}px !important;
-      height: ${Math.round(LAUNCHER_SIZE * 0.37)}px !important;
-    }
-    `;
+  // Inject styles
+  const style = document.createElement('style');
+  style.textContent = css;
+  document.head.appendChild(style);
 
-    // Inject style
-    const style = document.createElement('style');
-    style.textContent = css;
-    document.head.appendChild(style);
-
-    // Create widget HTML
-    const widget = document.createElement('div');
-    widget.className = 'n8n-chat-widget';
-    widget.innerHTML = `
-      <button class="chat-toggle" aria-label="Open chat">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M4 5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H9.8l-3.6 2.7c-.9.7-2.2 0-2.2-1.1V5Z" stroke="white" stroke-width="2" />
-          <circle cx="9" cy="9" r="1.5" fill="white"/><circle cx="13" cy="9" r="1.5" fill="white"/><circle cx="17" cy="9" r="1.5" fill="white"/>
-        </svg>
-      </button>
-      <div class="chat-container" style="display:none; flex-direction:column; width:320px; height:500px; position:fixed; bottom:${LAUNCHER_SIZE + 20}px; right:20px; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.2); overflow:hidden;">
-        <div class="chat-header" style="display:flex; align-items:center; gap:10px; padding:10px;">
-          <img src="https://s3.eu-west-1.amazonaws.com/cdn.webfactore.co.uk/e3cbf828-841e-41af-97e4-3f7170f86e6a.png?t=1748510500" alt="Logo">
-          <div>
-            <div style="font-weight:600;">Mortgage Assistant</div>
-            <div style="font-size:12px; opacity:0.8;">Hi 👋, how can we help?</div>
-          </div>
+  // Build widget
+  const root = document.createElement('div');
+  root.className = 'n8n-chat-widget';
+  root.innerHTML = `
+    <button class="chat-toggle" aria-label="Open chat">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H9.8l-3.6 2.7c-.9.7-2.2 0-2.2-1.1V5Z" stroke="white" stroke-width="2"/>
+        <circle cx="9" cy="9" r="1.5" fill="white"/><circle cx="13" cy="9" r="1.5" fill="white"/><circle cx="17" cy="9" r="1.5" fill="white"/>
+      </svg>
+    </button>
+    <div class="chat-container" role="dialog" aria-label="Mortgage Assistant">
+      <div class="chat-header">
+        <img src="https://s3.eu-west-1.amazonaws.com/cdn.webfactore.co.uk/e3cbf828-841e-41af-97e4-3f7170f86e6a.png?t=1748510500" alt="Logo" />
+        <div>
+          <div style="font-weight:600;">Mortgage Assistant</div>
+          <div style="font-size:12px;opacity:.8;">Hi 👋, how can we help?</div>
         </div>
-        <div class="chat-messages" style="flex:1; overflow:auto; padding:10px;"></div>
-        <form class="chat-input" style="display:flex; gap:8px; padding:10px; border-top:1px solid rgba(0,0,0,0.1);">
-          <input type="text" placeholder="Type your message..." style="flex:1; padding:8px; border-radius:8px; border:1px solid rgba(0,0,0,0.2);" />
-          <button type="submit" style="background:${PRIMARY}; color:#fff; border:0; border-radius:8px; padding:8px 12px;">Send</button>
-        </form>
       </div>
-    `;
-    document.body.appendChild(widget);
+      <div class="chat-messages"></div>
+      <form class="chat-input">
+        <input type="text" name="q" placeholder="Type your message..." autocomplete="off"/>
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(root);
 
-    const toggle = widget.querySelector('.chat-toggle');
-    const container = widget.querySelector('.chat-container');
-    const messages = widget.querySelector('.chat-messages');
-    const form = widget.querySelector('.chat-input');
-    const input = form.querySelector('input');
+  const toggle = root.querySelector('.chat-toggle');
+  const panel = root.querySelector('.chat-container');
+  const msgs = root.querySelector('.chat-messages');
+  const form = root.querySelector('.chat-input');
+  const input = form.querySelector('input[name="q"]');
 
-    function addMessage(text, sender) {
-        const msg = document.createElement('div');
-        msg.style.marginBottom = '8px';
-        msg.style.padding = '8px 12px';
-        msg.style.borderRadius = '10px';
-        msg.style.maxWidth = '80%';
-        msg.style.wordWrap = 'break-word';
-        msg.style.fontSize = '14px';
-        if (sender === 'user') {
-            msg.style.background = '#fff';
-            msg.style.border = '1px solid rgba(0,0,0,0.1)';
-            msg.style.marginLeft = 'auto';
-        } else {
-            msg.style.background = '#fdeee7';
-            msg.style.border = '1px solid #f6d0c3';
-        }
-        msg.textContent = text;
-        messages.appendChild(msg);
-        messages.scrollTop = messages.scrollHeight;
+  function setOpen(open){ root.classList.toggle('open', open); }
+  toggle.addEventListener('click', () => setOpen(!root.classList.contains('open')));
+
+  function addMsg(text, who='bot'){
+    const div = document.createElement('div');
+    div.className = `msg ${who}`;
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // Initial greeting
+  addMsg('Hi 👋, how can we help?', 'bot');
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const text = input.value.trim();
+    if(!text) return;
+    addMsg(text, 'user'); input.value=''; input.focus();
+
+    const thinking = document.createElement('div');
+    thinking.className = 'msg bot'; thinking.textContent = '…';
+    msgs.appendChild(thinking); msgs.scrollTop = msgs.scrollHeight;
+
+    try{
+      const res = await fetch(WEBHOOK_URL, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ message: text, route: 'general' })
+      });
+      let reply = await res.text();
+      try { const j = JSON.parse(reply); reply = j.reply || j.text || j.message || reply; } catch {}
+      thinking.remove(); addMsg(String(reply || ''), 'bot');
+    }catch{
+      thinking.remove(); addMsg('Unable to reach the assistant right now.', 'bot');
     }
+  });
 
-    toggle.addEventListener('click', () => {
-        container.style.display = container.style.display === 'none' ? 'flex' : 'none';
-    });
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const text = input.value.trim();
-        if (!text) return;
-        addMessage(text, 'user');
-        input.value = '';
-
-        addMessage('…', 'bot');
-        try {
-            const res = await fetch(WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text, route: 'general' })
-            });
-            let reply = await res.text();
-            try {
-                const json = JSON.parse(reply);
-                reply = json.reply || json.text || reply;
-            } catch {}
-            messages.lastChild.remove();
-            addMessage(reply, 'bot');
-        } catch {
-            messages.lastChild.remove();
-            addMessage('Unable to reach the assistant right now.', 'bot');
-        }
-    });
-
-    if (AUTO_OPEN) {
-        setTimeout(() => {
-            container.style.display = 'flex';
-        }, 500);
-    }
-})();
+  if (AUTO
